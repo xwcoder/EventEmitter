@@ -5,10 +5,6 @@ javascript EventEmitter for browser
 
 <table>
     <tr>
-        <th>方法</th>
-        <th></th>
-    </tr>
-    <tr>
         <td>addEventListener</td>
         <td></td>
     </tr>
