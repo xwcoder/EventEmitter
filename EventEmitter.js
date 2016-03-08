@@ -1,110 +1,114 @@
-( function ( exports ) {
-    
-    var extend = function ( o, c ) {
+(function (exports) {
 
-        if ( c && typeof c == 'object' ) {
-            for ( var p in c ) {
-                o[ p ] = c[ p ];
-            }
-        }
-    };
-
-    var util = ( function () {
+    var util = (function () {
 
         var toString = Object.prototype.toString;
 
-        var util = {
+        return {
 
-            isString : function ( s ) {
-                return toString.call( s ) === '[object String]';
+            isString: function (s) {
+                return toString.call(s) === '[object String]';
             },
 
-            isFunction : function ( f ) {
-                return toString.call( f ) === '[object Function]';
+            isFunction: function (f) {
+                return toString.call(f) === '[object Function]';
             },
 
-            isObject : function ( o ) {
-                return toString.call( o ) === '[object Object]';
+            isObject: function (o) {
+                return toString.call(o) === '[object Object]';
             }
         };
-        return util;
-    } )();
+    })();
 
-    exports.EventEmitter = function () {
+    function EventEmitter () {
         this.__events = {};
     };
 
-    extend( exports.EventEmitter.prototype, {
+    EventEmitter.prototype.addEventListener = function (type, handler, one) {
 
-        addEventListener : function ( type, handler, one ) {
-            if ( !type || !handler ) {
-                return;
-            }
-
-            this.__events[ type ] = this.__events[ type ] || [];
-            var events = this.__events[ type ];
-            
-            if ( !events.some( function ( _handler ) { return _handler.h == handler; } ) ) {
-                this.__events[ type ].push( { h : handler, one : one } );
-            }
-        },
-
-        removeEventListener : function ( type, handler ) {
-            if ( !type || !handler ) {
-                return;
-            }
-            var handlers = this.__events[ type ] || [];
-            handlers.forEach( function ( _handler, index ) {
-                if ( handler == _handler.h ) {
-                    handlers.splice( index, 1 );
-                }
-            } );
-        },
-
-        trigger : function ( type ) {
-
-            var handlers = this.__events[ type ] || [];
-            var args = [].slice.call( arguments );
-
-            var h;
-            var removeIndex = [];
-
-            handlers.forEach( function ( handler, index, handlers ) {
-                h = handler.h;
-
-                if ( util.isFunction( h ) ) {
-                    h.apply( this, args );
-                } else if ( util.isObject( h ) 
-                         && util.isFunction( h.handleEvent ) ) {
-                    h.handleEvent.apply( h, args );
-                }
-
-                if ( handler.one ) {
-                    removeIndex.push( index );
-                }
-
-            } );
-
-            if ( removeIndex.length ) {
-                handlers = handlers.filter( function ( handler, index ) {
-                    return removeIndex.indexOf( index ) == -1;
-                } );
-
-                this.__events[ type ] = handlers ;
-            }
-        },
-
-        emit : function ( type, data ) {
-            this.trigger( type, data );
-        },
-
-        on : function ( type, handler, one ) {
-            this.addEventListener( type, handler, one );
-        },
-        
-        one : function ( type, handler ) {
-            this.on( type, handler, true );
+        if (!type || !handler) {
+            return;
         }
-    } );
 
-} )( this );
+        this.__events[type] = this.__events[type] || [];
+        var handlers = this.__events[type];
+
+        var has;
+
+        for (var item of handlers) {
+            if (item.h == handler) {
+                has = true;
+                break;
+            }
+        }
+
+        if (!has) {
+            handlers.push({h: handler, one});
+        }
+    };
+
+    EventEmitter.prototype.removeEventListener = function (type, handler) {
+        if ( !type && !handler ) {
+            this.__events = {};
+            return;
+        }
+
+        if (!handler) {
+            delete this.__events[type];
+            return;
+        }
+
+        var handlers = this.__events[ type ] || [];
+
+        var item, index = 0;
+
+        while (index < handlers.length) {
+
+            item = handlers[index];
+
+            if (handler === item.h ) {
+                handlers.splice(index, 1);
+            } else {
+                index++;
+            }
+        }
+    };
+
+    EventEmitter.prototype.emit = function (type, data) {
+
+        if (!type) {
+            return;
+        }
+
+        var handlers = this.__events[ type ] || [];
+        var handlerWrap, h, index = 0;
+
+        while (index < handlers.length) {
+
+            item = handlers[index];
+            h = item.h;
+
+            if (isFunction(h)) {
+                h.call(null, data, type);
+            } else if (isObject(h) && isFunction(h.handleEvent)) {
+                h.handleEvent.call(h, type, data);
+            }
+
+            if (item.one) {
+                handlers.splice(index, 1);
+            } else {
+                index++;
+            }
+        }
+    };
+
+    EventEmitter.prototype.one = function (type, handler) {
+        this.addEventListener(type, handler, true);
+    };
+
+    EventEmitter.prototype.on = EventEmitter.prototype.addEventListener;
+    EventEmitter.prototype.off = EventEmitter.prototype.removeEventListener
+
+    exports.EventEmitter = EventEmitter;
+
+})(this);
